@@ -1,0 +1,40 @@
+#cloud-config
+ssh_authorized_keys:
+  - ${ssh_pub_key}
+
+write_files:
+  - path: /etc/systemd/system/${service}.service
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=${service}-server as a service
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/usr/bin/docker run --name %p --rm --privileged -p 50000:50000 -p 80:8080 -v /mnt/nfs/${entity}/services/${service}/home:/var/${service}_home ${service}/${service}:${container_version}
+      ExecStop=-/usr/bin/docker stop -t 2 %p
+
+      [Install]
+      WantedBy=multi-user.target
+
+groups:
+  - docker
+
+runcmd:
+  - sudo mkdir -p /mnt/nfs
+  - echo "${nfs_id}:/ /mnt/nfs nfs4 nfsvers=4.1,auto 0 0" | sudo tee -a /etc/fstab
+  - sudo mount -a
+  - sudo mkdir -p /mnt/nfs/${entity}/services/${service}/home
+  - sudo chmod -R 777 /mnt/nfs/*
+  - sudo chown -R ubuntu:ubuntu /mnt/nfs/${entity}/services/${service}/home
+  - export DEBIAN_FRONTEND=noninteractive
+  - curl -sL https://releases.rancher.com/install-docker/${docker_version}.sh | sh
+  - sudo systemctl daemon-reload
+  - sudo docker pull ${service}/${service}:${container_version}
+  - systemctl enable ${service}.service
+  - systemctl start ${service}.service
+  - sudo usermod -aG docker ubuntu

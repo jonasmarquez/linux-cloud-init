@@ -1,0 +1,37 @@
+#cloud-config
+ssh_authorized_keys:
+  - ${ssh_pub_key}
+
+write_files:
+  - path: /etc/systemd/system/${service}.service
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=${service}-server as a service
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/usr/bin/docker run --name %p --rm --privileged -p 80:9000 ${service}:${container_version}
+      ExecStop=-/usr/bin/docker stop -t 2 %p
+
+      [Install]
+      WantedBy=multi-user.target
+
+groups:
+  - docker
+
+runcmd:
+  - export DEBIAN_FRONTEND=noninteractive
+  - curl -sL https://github.com/jonasmarquez/linux-installation-scripts/raw/main/docker/${docker_version}.sh | sh
+  - sudo sysctl -w vm.max_map_count=524288
+  - sudo sysctl -w fs.file-max=131072
+  - ulimit -n 131072
+  - sudo systemctl daemon-reload
+  - sudo docker pull ${service}:${container_version}
+  - systemctl enable ${service}.service
+  - systemctl start ${service}.service
+  - sudo usermod -aG docker ubuntu
