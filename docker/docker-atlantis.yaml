@@ -49,7 +49,7 @@ write_files:
         tls_disable = true
       }
   # HASHICORP VAULT SYSTEMD SERVICE
-  - path: /etc/vault.d/vault.hcl
+  - path: /etc/systemd/system/vault.service
     permissions: 0644
     owner: root
     content: |
