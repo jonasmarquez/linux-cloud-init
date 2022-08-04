@@ -9,7 +9,7 @@ write_files:
   # HASHICORP VAULT CONFIG AGENT
   - path: /etc/vault.d/vault.hcl
     permissions: 0755
-    owner: root
+    owner: ubuntu
     content: |
       exit_after_auth = false
       pid_file = "./pidfile"
@@ -139,3 +139,22 @@ write_files:
       WantedBy=multi-user.target
 
 runcmd:
+  # CREATE AUTH-APP-ROLE IN VAULT WITH ROLE
+  - export VAULT_ADDR="https://${vault_addr}:8200"
+  - export VAULT_SKIP_VERIFY=true
+  - vault login ${vault_root_token}
+  - vault write -force auth/aws/role/${app_role} auth_type=iam bound_iam_principal_arn="${iam_role_arn_atlantis_cluster}" policies=${service}-app-pol ttl=24h
+  - sleep 180
+  # SERVICE VAULT AGENT START
+  - sudo systemctl daemon-reload
+  - sudo systemctl start vault.service
+  - sudo systemctl enable vault.service
+  - sleep 60
+  - export VAULT_AGENT_ADDR="http://127.0.0.1:8100"
+  # SERVICE START
+  #- sudo systemctl daemon-reload
+  #- sudo systemctl start ${service}.service
+  #- sudo systemctl enable ${service}.service
+  #- sleep 120
+  # SET PERMISSIONS TO VAULT TOKEN IN CONTAINER
+  #- docker exec ${service} chmod 644 /home/${service}/.vault-token
