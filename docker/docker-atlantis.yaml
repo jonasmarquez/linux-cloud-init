@@ -1,6 +1,6 @@
 #cloud-config
-#ssh_authorized_keys:
-  #- ${ssh_pub_key}
+ssh_authorized_keys:
+  - ${ssh_pub_key}
 
 mounts:
   - [ ${nfs_id}.efs.${aws_region}.amazonaws.com, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
@@ -48,5 +48,94 @@ write_files:
         address = "127.0.0.1:8100"
         tls_disable = true
       }
+  # HASHICORP VAULT SYSTEMD SERVICE
+  - path: /etc/vault.d/vault.hcl
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=Vault Agent
+      Documentation=https://www.vaultproject.io/docs/
+      Requires=network-online.target
+      After=network-online.target
+      ConditionFileNotEmpty=/etc/vault.d/vault.hcl
+
+      [Service]
+      WorkingDirectory=/etc/vault.d
+      #ProtectSystem=full
+      ProtectHome=read-only
+      #PrivateTmp=yes
+      #PrivateDevices=yes
+      #NoNewPrivileges=yes
+
+      Restart=on-failure
+      PermissionsStartOnly=true
+      ExecStart=/usr/local/bin/vault agent -config=/etc/vault.d/vault.hcl -log-level=debug
+      ExecReload=/bin/kill -HUP
+      KillSignal=SIGTERM
+
+      [Install]
+      WantedBy=multi-user.target
+  # AWS CREDENTIALS
+  - path: /home/ubuntu/.aws/credentials
+    permissions: 0644
+    owner: ubuntu
+    content: |
+      [${environment}]
+      aws_access_key_id = ${access_key}
+      aws_secret_access_key = ${secret_key}
+  # REPO SERVER CONFIGURATION
+  - path: /etc/${service}.d/config/repos.yaml
+    permissions: 0755
+    owner: ubuntu
+    content: |
+      repos:
+        - id: /.*/
+          allowed_overrides: [apply_requirements, workflow, delete_source_branch_on_merge]
+          allow_custom_workflows: true
+      workflows:
+        ${environment}:
+          plan:
+            steps:
+              - env:
+                  name: ENV_NAME
+                  value: ${environment}
+              - env:
+                  name: ENV_REGION
+                  value: ${aws_region}
+              - env:
+                  name: BUCKET_NAME
+                  value: ${bucket_name}
+              - env:
+                  name: DYNAMO_NAME
+                  value: ${dynamo_name}
+              - run: echo PLANNING && rm -rf .terraform
+              - run: terraform init -backend-config="region=\$ENV_REGION" -backend-config="bucket=\$BUCKET_NAME" -backend-config="dynamodb_table=\$DYNAMO_NAME" -backend-config="key=\$BASE_REPO_NAME/\$BASE_BRANCH_NAME/\$PROJECT_NAME.tfstate"
+              - plan:
+                  extra_args: [ -var-file=\$ENV_NAME.tfvars ]
+          apply:
+            steps:
+              - run: echo APPLYING
+              - apply
+  # CONTAINER SERVICE
+  # RUNATLANTIS Docker Hub: https://github.com/runatlantis/atlantis/pkgs/container/atlantis
+  # RUNATLANTIS Actual last version: docker pull ghcr.io/runatlantis/atlantis:v0.19.8-pre.20220722
+  - path: /etc/systemd/system/${service}.service
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=${service}-server as a service
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/usr/bin/docker run --name %p --rm --privileged -p 4141:4141 -v /mnt/nfs/${entity}/services/${service}/data:/home/${service}/.${service} -v /etc/${service}.d/config:/home/${service}/config -v /home/ubuntu/.aws/credentials:/home/${service}/.aws/credentials -v /etc/vault.d/vault-token:/home/${service}/.vault-token:rw ${registry}${container_version} server --gh-user="${git_user}" --gh-token="${git_token}" --gh-webhook-secret="${git_webhook_secret}" --repo-allowlist="*" --repo-config=/home/${service}/config/repos.yaml
+      ExecStop=-/usr/bin/docker stop -t 2 %p
+
+      [Install]
+      WantedBy=multi-user.target
 
 runcmd:
