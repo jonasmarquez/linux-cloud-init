@@ -152,9 +152,10 @@ runcmd:
   - sleep 60
   - export VAULT_AGENT_ADDR="http://127.0.0.1:8100"
   # SERVICE START
-  #- sudo systemctl daemon-reload
-  #- sudo systemctl start ${service}.service
-  #- sudo systemctl enable ${service}.service
-  #- sleep 120
+  - sudo chown -R systemd-network:ubuntu /mnt/nfs/*
+  - sudo systemctl daemon-reload
+  - sudo systemctl start ${service}.service
+  - sudo systemctl enable ${service}.service
+  - sleep 120
   # SET PERMISSIONS TO VAULT TOKEN IN CONTAINER
-  #- docker exec ${service} chmod 644 /home/${service}/.vault-token
+  - docker exec ${service} chmod 644 /home/${service}/.vault-token
