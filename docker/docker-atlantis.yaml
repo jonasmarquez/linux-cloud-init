@@ -3,7 +3,7 @@ ssh_authorized_keys:
   - ${ssh_pub_key}
 
 mounts:
-  - [ ${nfs_id}.efs.${aws_region}.amazonaws.com, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
+  - [ ${nfs_id}, /mnt/nfs/${entity}/services/${service}/data, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
 
 write_files:
   # HASHICORP VAULT CONFIG AGENT
@@ -25,7 +25,6 @@ write_files:
 
         sink "file" {
           config = {
-            #path = "/home/ubuntu/vault-token-via-agent"
             path = "./vault-token"
             mode = 644
           }
@@ -147,9 +146,6 @@ write_files:
         alias dstop="docker stop"
         alias dstart="docker start"
         alias di="docker images"
-  - path: /mnt/nfs/${entity}
-      permissions: 0755
-      owner: systemd-network:ubuntu
 
 runcmd:
   # CREATE AUTH-APP-ROLE IN VAULT WITH ROLE
