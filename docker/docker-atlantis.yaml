@@ -155,9 +155,9 @@ runcmd:
   - sudo systemctl daemon-reload
   - sudo systemctl enable ${service}.service
   - sudo systemctl start ${service}.service
-  - sudo chown -R systemd-network:ubuntu /mnt/nfs/*
   - sleep 120
-  # SET PERMISSIONS TO VAULT TOKEN IN CONTAINER
+  # SET PERMISSIONS TO NFS AND VAULT TOKEN IN CONTAINER
+  - sudo chown -R systemd-network:ubuntu /mnt/nfs/*
   - docker exec ${service} chmod 644 /home/${service}/.vault-token
   # CONFIG ALIAS
   - echo 'alias d="docker"' >> .bashrc
