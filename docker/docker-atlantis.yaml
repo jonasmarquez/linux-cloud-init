@@ -3,7 +3,7 @@ ssh_authorized_keys:
   - ${ssh_pub_key}
 
 mounts:
-  - [ ${nfs_id}.efs.${aws_region}.amazonaws.com, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
+  - [ ${nfs_id}, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
 
 write_files:
   # HASHICORP VAULT CONFIG AGENT
