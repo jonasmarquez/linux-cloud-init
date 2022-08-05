@@ -137,6 +137,19 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
+  - path: /home/ubuntu/.bashrc
+      permissions: 0755
+      owner: ubuntu:ubuntu
+      append: true
+      content: |
+        alias dps="docker ps"
+        alias dpsa="docker ps -a"
+        alias dstop="docker stop"
+        alias dstart="docker start"
+        alias di="docker images"
+  - path: /mnt/nfs/${entity}
+      permissions: 0755
+      owner: systemd-network:ubuntu
 
 runcmd:
   # CREATE AUTH-APP-ROLE IN VAULT WITH ROLE
@@ -157,12 +170,5 @@ runcmd:
   - sudo systemctl start ${service}.service
   - sleep 120
   # SET PERMISSIONS TO NFS AND VAULT TOKEN IN CONTAINER
-  - sudo chown -R systemd-network:ubuntu /mnt/nfs/*
+  #- sudo chown -R systemd-network:ubuntu /mnt/nfs/*
   - docker exec ${service} chmod 644 /home/${service}/.vault-token
-  # CONFIG ALIAS
-  - echo 'alias d="docker"' >> .bashrc
-  - echo 'alias dps="docker ps"' >> .bashrc
-  - echo 'alias dpsa="docker ps -a"' >> .bashrc
-  - echo 'alias dstop="docker stop"' >> .bashrc
-  - echo 'alias dstart="docker start"' >> .bashrc
-  - echo 'alias di="docker images"' >> .bashrc
