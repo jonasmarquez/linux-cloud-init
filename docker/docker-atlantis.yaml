@@ -3,7 +3,7 @@ ssh_authorized_keys:
   - ${ssh_pub_key}
 
 mounts:
-  - [ ${nfs_id}, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
+  - [ ${nfs_id}.efs.${aws_region}.amazonaws.com, /mnt/nfs, "nfs4,nfsvers=4.1", "auto", "0", "0" ]
 
 write_files:
   # HASHICORP VAULT CONFIG AGENT
@@ -25,6 +25,7 @@ write_files:
 
         sink "file" {
           config = {
+            #path = "/home/ubuntu/vault-token-via-agent"
             path = "./vault-token"
             mode = 644
           }
@@ -152,9 +153,9 @@ runcmd:
   - export VAULT_AGENT_ADDR="http://127.0.0.1:8100"
   # SERVICE START
   - sudo systemctl daemon-reload
-  - sudo systemctl enable ${service}.service
   - sudo systemctl start ${service}.service
+  - sudo systemctl enable ${service}.service
   - sleep 120
-  # SET PERMISSIONS TO NFS AND VAULT TOKEN IN CONTAINER
-  #- sudo chown -R systemd-network:ubuntu /mnt/nfs/*
+  # SET PERMISSIONS TO VAULT TOKEN IN CONTAINER
   - docker exec ${service} chmod 644 /home/${service}/.vault-token
+  - sudo chown -R systemd-network:ubuntu /mnt/nfs/*
