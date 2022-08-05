@@ -136,16 +136,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-  - path: /home/ubuntu/.bashrc
-      permissions: 0755
-      owner: ubuntu:ubuntu
-      append: true
-      content: |
-        alias dps="docker ps"
-        alias dpsa="docker ps -a"
-        alias dstop="docker stop"
-        alias dstart="docker start"
-        alias di="docker images"
 
 runcmd:
   # CREATE AUTH-APP-ROLE IN VAULT WITH ROLE
