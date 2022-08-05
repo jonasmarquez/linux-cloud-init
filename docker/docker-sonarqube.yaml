@@ -35,3 +35,10 @@ runcmd:
   - systemctl enable ${service}.service
   - systemctl start ${service}.service
   - sudo usermod -aG docker ubuntu
+  # CONFIG ALIAS
+  - echo 'alias d="docker"' >> .bashrc
+  - echo 'alias dps="docker ps"' >> .bashrc
+  - echo 'alias dpsa="docker ps -a"' >> .bashrc
+  - echo 'alias dstop="docker stop"' >> .bashrc
+  - echo 'alias dstart="docker start"' >> .bashrc
+  - echo 'alias di="docker images"' >> .bashrc
